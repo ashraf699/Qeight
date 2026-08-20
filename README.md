@@ -1,4 +1,4 @@
-# Qeight — 8 Ball Pool Aim Assist for Android
+# Qeight — OpenCV powered real time 8 Ball Pool Aim Assist for Android
 
 **Qeight** is a production-ready Android overlay application that provides real-time aim assistance for 8 Ball Pool (Miniclip). It uses advanced computer vision algorithms (OpenCV), GPU-accelerated compute shaders (Vulkan), and precise geometric calculations to detect balls, analyze shot angles, and render trajectory overlays.
 
