@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.ashraf.qeight">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PERMISSIONS
+         ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Required for checking accessibility service state on Android 15+ -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+         Lets MainActivity launch ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+         which shows the system's direct "Allow"/"Deny" dialog asking to
+         exempt this app from battery optimization. This is required on
+         OEM-customized Android builds (ColorOS/Oplus, MIUI, etc.) where
+         OverlayService can otherwise be silently killed shortly after
+         Indirect Mode starts, even with a valid foreground service +
+         notification in place.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+         BIND_ACCESSIBILITY_SERVICE is a signature-level permission that the
+         system grants automatically when it binds IndirectGestureService.
+         Declaring it here satisfies the linter and documents the requirement.
+    -->
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PACKAGE QUERIES
+         ═══════════════════════════════════════════════════════════════════ -->
+    <queries>
+        <package android:name="com.miniclip.eightballpool" />
+        <package android:name="com.android.vending" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Qeight.Splash">
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             MAIN ACTIVITY - App entry point
+             ═══════════════════════════════════════════════════════════════ -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Qeight.Splash"
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             TRAMPOLINE ACTIVITY - Transparent overlay launcher
+
+             Key attributes explained:
+             ────────────────────────────────────────────────────────────
+             • theme                  → Fully transparent, no dim, no animation
+             • taskAffinity=""        → Isolated task prevents pulling game forward
+             • launchMode             → singleInstance = reuses via onNewIntent
+             • screenOrientation      → "behind" inherits current screen orientation
+             • excludeFromRecents     → Hidden from task switcher
+             • noHistory              → Auto-removed from back stack
+             • configChanges          → Prevents recreation on config changes
+             • showWhenLocked         → Can appear over lock screen if needed
+             • exported="false"       → Only launchable from this app
+             ═══════════════════════════════════════════════════════════════ -->
+        <activity
+            android:name=".TrampolineActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:screenOrientation="behind"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Qeight.Transparent"
+            android:turnScreenOn="false"
+            android:windowSoftInputMode="adjustNothing" />
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             OVERLAY SERVICE - Aiming guide foreground service
+             ═══════════════════════════════════════════════════════════════ -->
+        <service
+            android:name=".OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             QUICK SETTINGS TILE SERVICE - 8-Ball Tile
+
+             IMPORTANT: The icon is set programmatically in QEightTileService
+             using createEightBallIcon() to ensure it displays correctly
+             regardless of system theme/tinting. The android:icon attribute
+             here serves as a fallback only.
+
+             Attributes:
+             ────────────────────────────────────────────────────────────
+             • icon                   → Fallback drawable (programmatic takes priority)
+             • label                  → Default tile label shown in QS panel
+             • permission             → Required for Quick Settings tiles
+             • exported="true"        → MUST be true for system to bind
+
+             Metadata:
+             ────────────────────────────────────────────────────────────
+             • ACTIVE_TILE            → Declares this as an active tile
+             ═══════════════════════════════════════════════════════════════ -->
+        <service
+            android:name=".QEightTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_eight_ball"
+            android:label="8-Ball"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             INDIRECT GESTURE SERVICE - Synthetic drag dispatcher
+
+             Android 15 compatible configuration with proper permissions
+             and exported flags.
+             ═══════════════════════════════════════════════════════════════ -->
+        <service
+            android:name=".IndirectGestureService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/indirect_gesture_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/indirect_gesture_service_config" />
+        </service>
+
+    </application>
+
+</manifest>
